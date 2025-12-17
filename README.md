@@ -1,167 +1,149 @@
-# 🎯 Kanban Auth-First System
+# 🔐 Auth-first Kanban API
 
-Sistema Kanban profissional com foco em autenticação, autorização e controle de acesso granular.
+Sistema Kanban com foco em **autenticação e autorização**, desenvolvido como projeto de portfólio para demonstrar domínio em segurança e arquitetura backend.
 
-## 🏗️ Stack Técnica
+## 🛠️ Stack
 
-- **Runtime:** Node.js + TypeScript
-- **Framework:** Express
-- **Database:** SQLite (better-sqlite3)
-- **Auth:** JWT (Access + Refresh Token)
-- **Security:** bcrypt, express-rate-limit
-- **Validation:** Zod
+- **Node.js** + **Express** + **TypeScript**
+- **SQLite** (better-sqlite3)
+- **JWT** (Access + Refresh Token com rotação)
+- **bcrypt** (hash de senhas)
+- **Zod** (validação)
 
-## 🎭 Papéis e Permissões
+## 📁 Arquitetura
 
-### ADMIN
-- ✅ Criar, editar e deletar tasks
-- ✅ Atribuir tasks a membros
-- ✅ Mover tasks entre qualquer status
-- ✅ Visualizar tudo
+```
+src/
+├── controllers/      # Handlers HTTP
+├── services/         # Lógica de negócio
+├── repositories/     # Acesso ao banco
+├── routes/           # Definição de rotas
+├── entities/         # Entidades de domínio
+├── dtos/             # Data Transfer Objects
+├── interfaces/       # Contratos (SOLID)
+├── mappers/          # Transformadores Entity ↔ DTO
+├── constants/        # Constantes centralizadas
+├── exceptions/       # Exceções customizadas
+├── validations/      # Schemas Zod
+├── utils/            # Utilitários (JWT, Hash)
+└── shared/           # Middlewares, config, database
+```
 
-### MEMBER
-- ✅ Visualizar tasks
-- ✅ Mover tasks atribuídas (apenas transições permitidas)
-- ❌ Não pode criar, editar ou deletar tasks
-- ❌ Não pode pular etapas no fluxo
+## 👥 Roles e Permissões
 
-## 📊 Fluxo de Status
+| Ação | ADMIN | MEMBER |
+|------|:-----:|:------:|
+| Criar tasks | ✅ | ❌ |
+| Editar tasks | ✅ | ❌ |
+| Deletar tasks | ✅ | ❌ |
+| Ver todas as tasks | ✅ | ❌ |
+| Ver tasks atribuídas | ✅ | ✅ |
+| Mover tasks (próprias) | ✅ | ✅ |
+| Aprovar tasks (REVIEW → DONE) | ✅ | ❌ |
+| Gerenciar usuários | ✅ | ❌ |
+
+## 📋 Fluxo Kanban
 
 ```
 BACKLOG → IN_PROGRESS → REVIEW → DONE
 ```
 
-### Regras de Transição
+**Regras:**
+- Tasks sempre começam em `BACKLOG`
+- MEMBER pode mover: `BACKLOG → IN_PROGRESS`, `IN_PROGRESS → REVIEW`
+- ADMIN pode mover: `REVIEW → DONE`, `REVIEW → IN_PROGRESS` (rejeição)
+- MEMBER só pode mover tasks atribuídas a ele
 
-**MEMBER pode:**
-- `BACKLOG → IN_PROGRESS`
-- `IN_PROGRESS → REVIEW`
+## 🚀 Instalação
 
-**Apenas ADMIN pode:**
-- `REVIEW → DONE` (aprovação)
-- `REVIEW → IN_PROGRESS` (rejeição)
-- Qualquer outra transição
-
-## 🚀 Quick Start
-
-### 1. Instalar dependências
 ```bash
+# Clonar repositório
+git clone https://github.com/takezo-code/projetooo.git
+cd projetooo
+
+# Instalar dependências
 npm install
-```
 
-### 2. Configurar ambiente
-```bash
-# Copiar .env.example para .env e ajustar valores
+# Configurar variáveis de ambiente
 cp .env.example .env
-```
 
-### 3. Criar database
-```bash
-npm run db:migrate
-```
+# Rodar migrations
+npm run migrate
 
-### 4. Rodar em desenvolvimento
-```bash
+# Iniciar servidor
 npm run dev
 ```
 
-## 📁 Estrutura do Projeto
+### ⚠️ Windows
 
-```
-src/
-├── modules/
-│   ├── auth/          # Autenticação (register, login, refresh, logout)
-│   ├── users/         # Gerenciamento de usuários (ADMIN only)
-│   └── tasks/         # CRUD de tasks + regras de movimentação
-├── shared/
-│   ├── config/        # Configurações (env)
-│   ├── database/      # Conexão e migrations
-│   ├── errors/        # Erros customizados
-│   └── middlewares/   # Auth, error handler, rate limit
-├── app.ts             # Configuração do Express
-└── server.ts          # Inicialização do servidor
-```
-
-## 🏛️ Arquitetura
-
-```
-Request → Controller → Service → Repository → Database
-              ↓           ↓
-         Validação   Regras de      
-         de input    negócio e
-                     autorização
-```
-
-### Responsabilidades
-
-- **Controller:** Recebe request, valida input, chama service, retorna response
-- **Service:** Regras de negócio, autorização, orquestração
-- **Repository:** Acesso direto ao banco (queries)
-
-## 🔐 Sistema de Autenticação
-
-### Endpoints
-
-```
-POST /api/auth/register  - Criar conta
-POST /api/auth/login     - Login (retorna access + refresh token)
-POST /api/auth/refresh   - Renovar access token
-POST /api/auth/logout    - Logout (revoga refresh token)
-```
-
-### JWT Strategy
-
-- **Access Token:** Vida curta (15min), usado em toda requisição
-- **Refresh Token:** Vida longa (7 dias), armazenado no DB, rotacionado a cada uso
-
-## 🧪 Testando a API
-
-### 1. Criar primeiro ADMIN
-```bash
-POST /api/auth/register
-{
-  "name": "Admin",
-  "email": "admin@test.com",
-  "password": "senha123",
-  "role": "ADMIN"
-}
-```
-
-### 2. Login
-```bash
-POST /api/auth/login
-{
-  "email": "admin@test.com",
-  "password": "senha123"
-}
-```
-
-### 3. Usar access token nas requisições
-```bash
-Authorization: Bearer <seu_access_token>
-```
-
-## 📝 Scripts Disponíveis
+Se tiver problemas com `better-sqlite3`, use WSL:
 
 ```bash
-npm run dev        # Desenvolvimento com hot reload
-npm run build      # Build para produção
-npm run start      # Rodar build de produção
-npm run db:migrate # Executar migrations
+wsl --install
+# No terminal WSL:
+cd /mnt/c/caminho/do/projeto
+npm install
+npm run dev
 ```
 
-## 🎯 Objetivo do Projeto
+## 🔑 Variáveis de Ambiente
 
-Este é um projeto de portfólio focado em demonstrar:
+```env
+PORT=3000
+JWT_SECRET=sua-chave-secreta
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+```
 
-- ✅ Domínio de autenticação e autorização
-- ✅ Arquitetura limpa e escalável
-- ✅ Regras de negócio bem definidas
-- ✅ Controle de acesso granular (RBAC)
-- ✅ Boas práticas de segurança
-- ✅ Código explicável em entrevistas técnicas
+## 📡 Endpoints
 
----
+### Auth
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| POST | `/api/auth/register` | Registrar usuário |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/refresh` | Renovar tokens |
+| POST | `/api/auth/logout` | Logout |
 
-**Status:** 🚧 Em desenvolvimento
+### Tasks
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/tasks` | Listar tasks |
+| GET | `/api/tasks/:id` | Buscar task |
+| POST | `/api/tasks` | Criar task (ADMIN) |
+| PUT | `/api/tasks/:id` | Atualizar task (ADMIN) |
+| PATCH | `/api/tasks/:id/move` | Mover task |
+| DELETE | `/api/tasks/:id` | Deletar task (ADMIN) |
 
+### Users
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/users` | Listar usuários (ADMIN) |
+| GET | `/api/users/:id` | Buscar usuário |
+| PUT | `/api/users/:id` | Atualizar usuário (ADMIN) |
+| DELETE | `/api/users/:id` | Deletar usuário (ADMIN) |
+
+## 🔒 Autenticação
+
+Todas as rotas protegidas requerem header:
+
+```
+Authorization: Bearer <access_token>
+```
+
+### Refresh Token Rotation
+
+Quando o access token expira, use o refresh token para obter novos tokens. O refresh token antigo é revogado automaticamente (rotação).
+
+## 🎯 Padrões Implementados
+
+- **Layered Architecture** - Separação em camadas
+- **Repository Pattern** - Abstração de dados
+- **DTO Pattern** - Separação API ↔ Domínio
+- **Mapper Pattern** - Transformação entre camadas
+- **Dependency Inversion** - Interfaces e contratos
+- **Custom Exceptions** - Erros semânticos
+
+## 📄 Licença
+
+MIT

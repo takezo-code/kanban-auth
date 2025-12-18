@@ -9,12 +9,8 @@ import { ForbiddenException } from '../exceptions/ForbiddenException';
 import { NotFoundException } from '../exceptions/NotFoundException';
 import { ValidationException } from '../exceptions/ValidationException';
 import { USER_ROLES } from '../constants/roles.constants';
-import { TASK_STATUS, ALLOWED_TRANSITIONS, ADMIN_ONLY_TRANSITIONS } from '../constants/task-status.constants';
+import { ALLOWED_TRANSITIONS, ADMIN_ONLY_TRANSITIONS } from '../constants/task-status.constants';
 
-/**
- * Service com regras de negócio de tasks
- * Usa DTOs, Constants e Exceptions
- */
 export class TaskService {
   private taskRepository: ITaskRepository;
 
@@ -22,20 +18,15 @@ export class TaskService {
     this.taskRepository = new TaskRepository();
   }
 
-  // ==================== CREATE (ADMIN ONLY) ====================
-
   async createTask(data: CreateTaskDTO, currentUser: JWTPayload): Promise<TaskDTO> {
-    // Apenas ADMIN pode criar tasks
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Apenas administradores podem criar tasks');
     }
 
-    // Validar título
     if (!data.title || data.title.trim().length === 0) {
       throw new ValidationException('Título é obrigatório');
     }
 
-    // Validar se usuário assignedTo existe
     if (data.assignedTo) {
       const userExists = this.taskRepository.userExists(data.assignedTo);
       if (!userExists) {
@@ -43,7 +34,6 @@ export class TaskService {
       }
     }
 
-    // Criar task (sempre nasce em BACKLOG)
     const task = this.taskRepository.create(
       data.title.trim(),
       data.description?.trim() || null,
@@ -59,15 +49,10 @@ export class TaskService {
     return taskDTO;
   }
 
-  // ==================== READ ====================
-
   async getAllTasks(currentUser: JWTPayload): Promise<TaskDTO[]> {
-    // ADMIN vê todas as tasks
     if (currentUser.role === USER_ROLES.ADMIN) {
       return this.taskRepository.findAll();
     }
-
-    // MEMBER vê apenas tasks atribuídas a ele
     return this.taskRepository.findByAssignedTo(currentUser.userId);
   }
 
@@ -78,12 +63,10 @@ export class TaskService {
       throw new NotFoundException('Task não encontrada');
     }
 
-    // ADMIN pode ver qualquer task
     if (currentUser.role === USER_ROLES.ADMIN) {
       return task;
     }
 
-    // MEMBER só pode ver tasks atribuídas a ele
     if (task.assignedTo !== currentUser.userId) {
       throw new ForbiddenException('Acesso negado');
     }
@@ -91,10 +74,7 @@ export class TaskService {
     return task;
   }
 
-  // ==================== UPDATE (ADMIN ONLY) ====================
-
   async updateTask(id: number, data: UpdateTaskDTO, currentUser: JWTPayload): Promise<TaskDTO> {
-    // Apenas ADMIN pode editar tasks
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Apenas administradores podem editar tasks');
     }
@@ -104,7 +84,6 @@ export class TaskService {
       throw new NotFoundException('Task não encontrada');
     }
 
-    // Validar se novo assignedTo existe
     if (data.assignedTo !== undefined) {
       if (data.assignedTo !== null) {
         const userExists = this.taskRepository.userExists(data.assignedTo);
@@ -114,7 +93,6 @@ export class TaskService {
       }
     }
 
-    // Atualizar task
     this.taskRepository.update(
       id,
       data.title?.trim() || task.title,
@@ -130,8 +108,6 @@ export class TaskService {
     return updatedTask;
   }
 
-  // ==================== MOVE (REGRAS COMPLEXAS) ====================
-
   async moveTask(id: number, data: MoveTaskDTO, currentUser: JWTPayload): Promise<TaskDTO> {
     const task = this.taskRepository.findById(id);
     if (!task) {
@@ -141,12 +117,10 @@ export class TaskService {
     const currentStatus = task.status;
     const newStatus = data.newStatus;
 
-    // Não pode mover se já está no status desejado
     if (currentStatus === newStatus) {
       throw new ValidationException('Task já está neste status');
     }
 
-    // Validar se transição é permitida no fluxo
     const allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus];
     if (!allowedNextStatuses.includes(newStatus)) {
       throw new ValidationException(
@@ -154,7 +128,6 @@ export class TaskService {
       );
     }
 
-    // Verificar se é transição exclusiva de ADMIN
     const isAdminOnlyTransition = ADMIN_ONLY_TRANSITIONS.some(
       ([from, to]) => from === currentStatus && to === newStatus
     );
@@ -165,14 +138,12 @@ export class TaskService {
       );
     }
 
-    // MEMBER só pode mover tasks atribuídas a ele
     if (currentUser.role === USER_ROLES.MEMBER) {
       if (task.assignedTo !== currentUser.userId) {
         throw new ForbiddenException('Você só pode mover tasks atribuídas a você');
       }
     }
 
-    // Atualizar status
     this.taskRepository.updateStatus(id, newStatus);
 
     const movedTask = this.taskRepository.findById(id);
@@ -183,10 +154,7 @@ export class TaskService {
     return movedTask;
   }
 
-  // ==================== DELETE (ADMIN ONLY) ====================
-
   async deleteTask(id: number, currentUser: JWTPayload): Promise<void> {
-    // Apenas ADMIN pode deletar tasks
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Apenas administradores podem deletar tasks');
     }

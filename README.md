@@ -95,6 +95,31 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 ```
 
+## 📚 Documentação da API
+
+A documentação completa da API está disponível em:
+
+- **Swagger UI local**: `http://localhost:3000/api-docs` (quando o servidor estiver rodando)
+- **Arquivos estáticos**: Pasta `docs/` contém `openapi.json` e `openapi.yaml`
+
+### Visualizar no GitHub
+
+📖 [Ver documentação no Swagger Editor](https://editor.swagger.io/?url=https://raw.githubusercontent.com/takezo-code/projetooo/main/docs/openapi.yaml)
+
+### Gerar/Atualizar documentação
+
+```bash
+npm run docs:generate
+```
+
+Os arquivos podem ser visualizados em:
+- [Swagger Editor](https://editor.swagger.io/) - Cole o conteúdo do `openapi.yaml`
+- [Redoc](https://redocly.github.io/redoc/) - Visualização alternativa
+- Postman - Importe o `openapi.json`
+- Insomnia - Importe o `openapi.json`
+
+Veja mais opções em [`docs/GITHUB.md`](./docs/GITHUB.md)
+
 ## 📡 Endpoints da API
 
 ### 🔐 Autenticação

@@ -4,13 +4,7 @@ import { RefreshToken } from '../entities/RefreshToken.entity';
 import { IAuthRepository } from '../interfaces/repositories/IAuthRepository';
 import { UserMapper } from '../mappers/user.mapper';
 
-/**
- * Implementação do Repository de Autenticação
- * Usa sql.js
- */
 export class AuthRepository implements IAuthRepository {
-  // ==================== USERS ====================
-
   findUserByEmail(email: string): User | undefined {
     const db = getDatabase();
     const stmt = db.prepare(`
@@ -70,7 +64,6 @@ export class AuthRepository implements IAuthRepository {
 
     saveDatabase();
 
-    // Pegar o último ID inserido
     const result = db.exec('SELECT last_insert_rowid() as id');
     const lastId = result[0].values[0][0] as number;
 
@@ -81,8 +74,6 @@ export class AuthRepository implements IAuthRepository {
 
     return user;
   }
-
-  // ==================== REFRESH TOKENS ====================
 
   saveRefreshToken(token: string, userId: number, expiresAt: Date): RefreshToken {
     const db = getDatabase();

@@ -4,10 +4,6 @@ import { TaskDTO } from '../dtos/task/TaskDTO';
 import { ITaskRepository } from '../interfaces/repositories/ITaskRepository';
 import { TaskMapper } from '../mappers/task.mapper';
 
-/**
- * Implementação do Repository de Tasks
- * Usa sql.js
- */
 export class TaskRepository implements ITaskRepository {
   findAll(): TaskDTO[] {
     const db = getDatabase();

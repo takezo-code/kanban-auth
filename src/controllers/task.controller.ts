@@ -4,10 +4,6 @@ import { UnauthorizedException } from '../exceptions/UnauthorizedException';
 import { ValidationException } from '../exceptions/ValidationException';
 import { createTaskSchema, updateTaskSchema, moveTaskSchema } from '../validations/task.validation';
 
-/**
- * Controller de tasks
- * Usa Exceptions específicas
- */
 export class TaskController {
   private taskService: TaskService;
 
@@ -15,7 +11,6 @@ export class TaskController {
     this.taskService = new TaskService();
   }
 
-  // POST /api/tasks - Criar task (ADMIN only)
   createTask = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -34,7 +29,6 @@ export class TaskController {
     });
   };
 
-  // GET /api/tasks - Listar tasks (ADMIN vê todas, MEMBER vê só as dele)
   getAllTasks = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -48,7 +42,6 @@ export class TaskController {
     });
   };
 
-  // GET /api/tasks/:id - Buscar task por ID
   getTaskById = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -67,7 +60,6 @@ export class TaskController {
     });
   };
 
-  // PUT /api/tasks/:id - Atualizar task (ADMIN only)
   updateTask = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -91,7 +83,6 @@ export class TaskController {
     });
   };
 
-  // PATCH /api/tasks/:id/move - Mover task (regras complexas)
   moveTask = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -115,7 +106,6 @@ export class TaskController {
     });
   };
 
-  // DELETE /api/tasks/:id - Deletar task (ADMIN only)
   deleteTask = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');

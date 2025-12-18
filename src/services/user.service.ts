@@ -9,10 +9,6 @@ import { ConflictException } from '../exceptions/ConflictException';
 import { ValidationException } from '../exceptions/ValidationException';
 import { USER_ROLES } from '../constants/roles.constants';
 
-/**
- * Service de usuários
- * Usa DTOs, Constants e Exceptions
- */
 export class UserService {
   private userRepository: IUserRepository;
 
@@ -20,10 +16,7 @@ export class UserService {
     this.userRepository = new UserRepository();
   }
 
-  // ==================== READ ====================
-
   async getAllUsers(currentUser: JWTPayload): Promise<UserDTO[]> {
-    // Apenas ADMIN pode listar usuários
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Acesso negado');
     }
@@ -32,7 +25,6 @@ export class UserService {
   }
 
   async getUserById(id: number, currentUser: JWTPayload): Promise<UserDTO> {
-    // Apenas ADMIN pode ver detalhes de outros usuários
     if (currentUser.role !== USER_ROLES.ADMIN && currentUser.userId !== id) {
       throw new ForbiddenException('Acesso negado');
     }
@@ -45,10 +37,7 @@ export class UserService {
     return user;
   }
 
-  // ==================== UPDATE (ADMIN ONLY) ====================
-
   async updateUser(id: number, data: UpdateUserDTO, currentUser: JWTPayload): Promise<UserDTO> {
-    // Apenas ADMIN pode atualizar usuários
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Apenas administradores podem atualizar usuários');
     }
@@ -58,7 +47,6 @@ export class UserService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    // Validar email único
     if (data.email) {
       const emailExists = this.userRepository.emailExists(data.email, id);
       if (emailExists) {
@@ -66,7 +54,6 @@ export class UserService {
       }
     }
 
-    // Atualizar usuário
     this.userRepository.update(
       id,
       data.name || user.name,
@@ -82,10 +69,7 @@ export class UserService {
     return updatedUser;
   }
 
-  // ==================== DELETE (ADMIN ONLY) ====================
-
   async deleteUser(id: number, currentUser: JWTPayload): Promise<void> {
-    // Apenas ADMIN pode deletar usuários
     if (currentUser.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException('Apenas administradores podem deletar usuários');
     }
@@ -95,12 +79,10 @@ export class UserService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    // Não pode deletar a si mesmo
     if (user.id === currentUser.userId) {
       throw new ValidationException('Você não pode deletar sua própria conta');
     }
 
-    // Não pode deletar o último admin
     if (user.role === USER_ROLES.ADMIN) {
       const adminCount = this.userRepository.countAdmins();
       if (adminCount <= 1) {

@@ -1,12 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
 
-/**
- * Rate limiter para rotas de autenticação
- * Previne ataques de força bruta
- * 
- * Configuração padrão: 5 requisições a cada 15 minutos
- */
 export const authRateLimiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   max: env.rateLimitMaxRequests,
@@ -17,4 +11,3 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-

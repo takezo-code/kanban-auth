@@ -4,10 +4,6 @@ import { UnauthorizedException } from '../exceptions/UnauthorizedException';
 import { ValidationException } from '../exceptions/ValidationException';
 import { updateUserSchema } from '../validations/user.validation';
 
-/**
- * Controller de usuários
- * Usa Exceptions específicas
- */
 export class UserController {
   private userService: UserService;
 
@@ -15,7 +11,6 @@ export class UserController {
     this.userService = new UserService();
   }
 
-  // GET /api/users - Listar usuários (ADMIN only)
   getAllUsers = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -29,7 +24,6 @@ export class UserController {
     });
   };
 
-  // GET /api/users/:id - Buscar usuário por ID
   getUserById = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -48,7 +42,6 @@ export class UserController {
     });
   };
 
-  // PUT /api/users/:id - Atualizar usuário (ADMIN only)
   updateUser = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');
@@ -72,7 +65,6 @@ export class UserController {
     });
   };
 
-  // DELETE /api/users/:id - Deletar usuário (ADMIN only)
   deleteUser = async (req: Request, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedException('Usuário não autenticado');

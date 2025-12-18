@@ -75,7 +75,7 @@ export class TaskController {
       throw new ValidationException(validation.error.errors[0].message);
     }
 
-    const task = await this.taskService.updateTask(id, validation.data, req.user);
+    const task = await this.taskService.updateTask(id, validation.data as any, req.user);
 
     res.status(200).json({
       status: 'success',
@@ -98,7 +98,7 @@ export class TaskController {
       throw new ValidationException(validation.error.errors[0].message);
     }
 
-    const task = await this.taskService.moveTask(id, validation.data, req.user);
+    const task = await this.taskService.moveTask(id, validation.data as any, req.user);
 
     res.status(200).json({
       status: 'success',

@@ -28,20 +28,20 @@ export class TaskService {
     }
 
     if (data.assignedTo) {
-      const userExists = this.taskRepository.userExists(data.assignedTo);
+      const userExists = await this.taskRepository.userExists(data.assignedTo);
       if (!userExists) {
         throw new NotFoundException('Usuário atribuído não encontrado');
       }
     }
 
-    const task = this.taskRepository.create(
+    const task = await this.taskRepository.create(
       data.title.trim(),
       data.description?.trim() || null,
       currentUser.userId,
       data.assignedTo || null
     );
 
-    const taskDTO = this.taskRepository.findById(task.id);
+    const taskDTO = await this.taskRepository.findById(task.id);
     if (!taskDTO) {
       throw new Error('Falha ao buscar task criada');
     }
@@ -51,13 +51,13 @@ export class TaskService {
 
   async getAllTasks(currentUser: JWTPayload): Promise<TaskDTO[]> {
     if (currentUser.role === USER_ROLES.ADMIN) {
-      return this.taskRepository.findAll();
+      return await this.taskRepository.findAll();
     }
-    return this.taskRepository.findByAssignedTo(currentUser.userId);
+    return await this.taskRepository.findByAssignedTo(currentUser.userId);
   }
 
   async getTaskById(id: number, currentUser: JWTPayload): Promise<TaskDTO> {
-    const task = this.taskRepository.findById(id);
+    const task = await this.taskRepository.findById(id);
 
     if (!task) {
       throw new NotFoundException('Task não encontrada');
@@ -79,28 +79,28 @@ export class TaskService {
       throw new ForbiddenException('Apenas administradores podem editar tasks');
     }
 
-    const task = this.taskRepository.findById(id);
+    const task = await this.taskRepository.findById(id);
     if (!task) {
       throw new NotFoundException('Task não encontrada');
     }
 
     if (data.assignedTo !== undefined) {
       if (data.assignedTo !== null) {
-        const userExists = this.taskRepository.userExists(data.assignedTo);
+        const userExists = await this.taskRepository.userExists(data.assignedTo);
         if (!userExists) {
           throw new NotFoundException('Usuário atribuído não encontrado');
         }
       }
     }
 
-    this.taskRepository.update(
+    await this.taskRepository.update(
       id,
       data.title?.trim() || task.title,
       data.description !== undefined ? (data.description?.trim() || null) : task.description,
       data.assignedTo !== undefined ? data.assignedTo : task.assignedTo
     );
 
-    const updatedTask = this.taskRepository.findById(id);
+    const updatedTask = await this.taskRepository.findById(id);
     if (!updatedTask) {
       throw new Error('Falha ao buscar task atualizada');
     }
@@ -109,7 +109,7 @@ export class TaskService {
   }
 
   async moveTask(id: number, data: MoveTaskDTO, currentUser: JWTPayload): Promise<TaskDTO> {
-    const task = this.taskRepository.findById(id);
+    const task = await this.taskRepository.findById(id);
     if (!task) {
       throw new NotFoundException('Task não encontrada');
     }
@@ -144,9 +144,9 @@ export class TaskService {
       }
     }
 
-    this.taskRepository.updateStatus(id, newStatus);
+    await this.taskRepository.updateStatus(id, newStatus);
 
-    const movedTask = this.taskRepository.findById(id);
+    const movedTask = await this.taskRepository.findById(id);
     if (!movedTask) {
       throw new Error('Falha ao buscar task movida');
     }
@@ -159,11 +159,11 @@ export class TaskService {
       throw new ForbiddenException('Apenas administradores podem deletar tasks');
     }
 
-    const task = this.taskRepository.findById(id);
+    const task = await this.taskRepository.findById(id);
     if (!task) {
       throw new NotFoundException('Task não encontrada');
     }
 
-    this.taskRepository.delete(id);
+    await this.taskRepository.delete(id);
   }
 }

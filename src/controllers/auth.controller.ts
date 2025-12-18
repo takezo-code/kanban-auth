@@ -16,7 +16,7 @@ export class AuthController {
       throw new ValidationException(validation.error.errors[0].message);
     }
 
-    const result = await this.authService.register(validation.data);
+    const result = await this.authService.register(validation.data as any);
 
     res.status(201).json({
       status: 'success',

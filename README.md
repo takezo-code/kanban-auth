@@ -4,11 +4,18 @@ Sistema Kanban com foco em **autenticação e autorização**, desenvolvido como
 
 ## 🛠️ Stack
 
+### Backend
 - **Node.js** + **Express** + **TypeScript**
-- **SQLite** (better-sqlite3)
+- **PostgreSQL** (via Docker)
 - **JWT** (Access + Refresh Token com rotação)
 - **bcrypt** (hash de senhas)
 - **Zod** (validação)
+- **Swagger/OpenAPI** (documentação)
+
+### Frontend
+- **React** + **TypeScript** + **Vite**
+- **Axios** (HTTP client)
+- Interface Kanban visual e responsiva
 
 ## 📁 Arquitetura
 
@@ -54,46 +61,191 @@ BACKLOG → IN_PROGRESS → REVIEW → DONE
 - ADMIN pode mover: `REVIEW → DONE`, `REVIEW → IN_PROGRESS` (rejeição)
 - MEMBER só pode mover tasks atribuídas a ele
 
-## 🚀 Instalação
+## 🚀 Como Rodar
+
+### 🐳 Docker (Recomendado - Mais Fácil)
 
 ```bash
-# Clonar repositório
-git clone https://github.com/takezo-code/projetooo.git
-cd projetooo
+# Construir e iniciar tudo
+docker-compose up -d --build
 
+# Verificar status
+docker-compose ps
+
+# Ver logs
+docker-compose logs -f app
+
+# Parar
+docker-compose down
+```
+
+**Acesse:**
+- API: http://localhost:3000
+- Swagger: http://localhost:3000/api-docs
+- Health: http://localhost:3000/health
+
+### 💻 Local (Desenvolvimento)
+
+```bash
 # Instalar dependências
 npm install
 
-# Configurar variáveis de ambiente
-cp .env.example .env
+# Subir PostgreSQL
+npm run docker:up
 
 # Rodar migrations
-npm run migrate
+npm run db:migrate
 
 # Iniciar servidor
 npm run dev
+
+# Ou tudo de uma vez:
+npm run start:all
 ```
 
-### ⚠️ Windows
+Veja [`QUICK_START.md`](./QUICK_START.md) para mais detalhes.
 
-Se tiver problemas com `better-sqlite3`, use WSL:
+### 🐳 Docker (Recomendado)
+
+**Para rodar tudo no Docker:**
 
 ```bash
-wsl --install
-# No terminal WSL:
-cd /mnt/c/caminho/do/projeto
+# Produção (build + start)
+docker-compose up -d --build
+
+# Desenvolvimento (com hot reload)
+docker-compose -f docker-compose.dev.yml up --build
+
+# Ver logs
+docker-compose logs -f
+
+# Parar tudo
+docker-compose down
+```
+
+### 🚀 Início Rápido (Local)
+
+**Para iniciar tudo automaticamente:**
+
+```bash
+# Windows (PowerShell)
+npm run start:win
+
+# Linux/Mac (Bash)
+npm run start:unix
+
+# Cross-platform (Node.js)
+npm run start:all
+```
+
+O script irá:
+1. ✅ Verificar se Docker está rodando
+2. ✅ Subir PostgreSQL
+3. ✅ Aguardar PostgreSQL estar pronto
+4. ✅ Rodar migrations automaticamente
+5. ✅ Iniciar o servidor
+
+### 🐳 Docker (Backend)
+
+**Para rodar o backend no Docker:**
+
+```bash
+# Iniciar backend
+docker-compose up -d --build
+
+# Ver logs
+docker-compose logs -f app
+
+# Parar
+docker-compose down
+```
+
+### 🎨 Frontend
+
+**Para rodar o frontend:**
+
+```bash
+# Entrar na pasta do frontend
+cd frontend
+
+# Instalar dependências (se ainda não instalou)
 npm install
+
+# Iniciar servidor de desenvolvimento
 npm run dev
+```
+
+O frontend estará disponível em: **http://localhost:5173**
+
+### 🚀 Rodar Tudo de Uma Vez (Recomendado)
+
+**Comando único para iniciar Backend + Frontend:**
+
+```bash
+npm run start:all
+```
+
+Ou no Windows PowerShell:
+```bash
+npm run start:win
+```
+
+Isso irá:
+- ✅ Verificar e iniciar Docker (PostgreSQL + API)
+- ✅ Aguardar backend estar pronto
+- ✅ Iniciar frontend automaticamente
+
+**Acessar:**
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:3000
+- **Swagger**: http://localhost:3000/api-docs
+
+### 🔧 Rodar Separadamente
+
+1. **Backend (Docker):**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+2. **Frontend (Terminal separado):**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+Veja [`QUICK_START.md`](./QUICK_START.md) para guia completo.
+
+**Comandos úteis:**
+```bash
+docker-compose ps              # Status dos containers
+docker-compose logs -f         # Logs em tempo real
+docker-compose restart         # Reiniciar containers
+docker-compose down -v         # Parar e limpar volumes
 ```
 
 ## 🔑 Variáveis de Ambiente
 
 ```env
+# Server
 PORT=3000
-JWT_SECRET=sua-chave-secreta
-JWT_EXPIRES_IN=15m
+NODE_ENV=development
+
+# PostgreSQL
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=kanban_user
+POSTGRES_PASSWORD=kanban_pass
+POSTGRES_DB=kanban_db
+DATABASE_URL=postgresql://kanban_user:kanban_pass@localhost:5432/kanban_db
+
+# JWT
+JWT_ACCESS_SECRET=your_super_secret_access_key
+JWT_REFRESH_SECRET=your_super_secret_refresh_key
+JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 ```
+
+Veja [`DOCKER.md`](./DOCKER.md) para mais detalhes.
 
 ## 📚 Documentação da API
 

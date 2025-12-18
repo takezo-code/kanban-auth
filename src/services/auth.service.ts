@@ -23,7 +23,7 @@ export class AuthService {
   }
 
   async register(data: RegisterDTO): Promise<AuthResponseDTO> {
-    const existingUser = this.authRepository.findUserByEmail(data.email);
+    const existingUser = await this.authRepository.findUserByEmail(data.email);
     if (existingUser) {
       throw new ConflictException('Email já cadastrado');
     }
@@ -34,7 +34,7 @@ export class AuthService {
 
     const passwordHash = await HashUtil.hash(data.password);
     const role = data.role || USER_ROLES.MEMBER;
-    const user = this.authRepository.createUser(
+    const user = await this.authRepository.createUser(
       data.name,
       data.email,
       passwordHash,
@@ -53,7 +53,7 @@ export class AuthService {
   }
 
   async login(data: LoginDTO): Promise<AuthResponseDTO> {
-    const user = this.authRepository.findUserByEmail(data.email);
+    const user = await this.authRepository.findUserByEmail(data.email);
     if (!user) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
@@ -75,7 +75,7 @@ export class AuthService {
   }
 
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const storedToken = this.authRepository.findRefreshToken(refreshToken);
+    const storedToken = await this.authRepository.findRefreshToken(refreshToken);
     
     if (!storedToken) {
       throw new UnauthorizedException('Refresh token inválido');
@@ -94,12 +94,12 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido');
     }
 
-    const user = this.authRepository.findUserById(payload.userId);
+    const user = await this.authRepository.findUserById(payload.userId);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    this.authRepository.revokeRefreshToken(refreshToken);
+    await this.authRepository.revokeRefreshToken(refreshToken);
 
     const newAccessToken = this.generateAccessToken(user);
     const newRefreshToken = this.generateRefreshToken(user);
@@ -112,7 +112,7 @@ export class AuthService {
   }
 
   async logout(refreshToken: string): Promise<void> {
-    this.authRepository.revokeRefreshToken(refreshToken);
+    await this.authRepository.revokeRefreshToken(refreshToken);
   }
 
   private generateAccessToken(user: User): string {
@@ -136,6 +136,6 @@ export class AuthService {
   private async saveRefreshToken(token: string, userId: number): Promise<void> {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
-    this.authRepository.saveRefreshToken(token, userId, expiresAt);
+    await this.authRepository.saveRefreshToken(token, userId, expiresAt);
   }
 }

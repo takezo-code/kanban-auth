@@ -1,114 +1,91 @@
-import { getDatabase, saveDatabase } from '../shared/database/connection';
+import { query } from '../shared/database/postgres.connection';
 import { Task } from '../entities/Task.entity';
 import { TaskDTO } from '../dtos/task/TaskDTO';
 import { ITaskRepository } from '../interfaces/repositories/ITaskRepository';
 import { TaskMapper } from '../mappers/task.mapper';
 
 export class TaskRepository implements ITaskRepository {
-  findAll(): TaskDTO[] {
-    const db = getDatabase();
-    const results = db.exec(`
+  async findAll(): Promise<TaskDTO[]> {
+    const result = await query(`
       SELECT 
         t.id,
         t.title,
         t.description,
         t.status,
-        t.assigned_to as assignedTo,
-        t.created_by as createdBy,
-        t.created_at as createdAt,
-        t.updated_at as updatedAt,
-        assigned.name as assignedToName,
-        creator.name as createdByName
+        t.assigned_to as "assignedTo",
+        t.created_by as "createdBy",
+        t.created_at as "createdAt",
+        t.updated_at as "updatedAt",
+        assigned.name as "assignedToName",
+        creator.name as "createdByName"
       FROM tasks t
       LEFT JOIN users assigned ON t.assigned_to = assigned.id
       LEFT JOIN users creator ON t.created_by = creator.id
       ORDER BY t.created_at DESC
     `);
 
-    if (!results.length) return [];
-
-    const columns = results[0].columns;
-    return results[0].values.map(row => {
-      const obj: any = {};
-      columns.forEach((col, i) => obj[col] = row[i]);
-      return TaskMapper.toDTO(obj);
-    });
+    return result.rows.map((row: any) => TaskMapper.toDTO(row));
   }
 
-  findById(id: number): TaskDTO | undefined {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  async findById(id: number): Promise<TaskDTO | undefined> {
+    const result = await query(`
       SELECT 
         t.id,
         t.title,
         t.description,
         t.status,
-        t.assigned_to as assignedTo,
-        t.created_by as createdBy,
-        t.created_at as createdAt,
-        t.updated_at as updatedAt,
-        assigned.name as assignedToName,
-        creator.name as createdByName
+        t.assigned_to as "assignedTo",
+        t.created_by as "createdBy",
+        t.created_at as "createdAt",
+        t.updated_at as "updatedAt",
+        assigned.name as "assignedToName",
+        creator.name as "createdByName"
       FROM tasks t
       LEFT JOIN users assigned ON t.assigned_to = assigned.id
       LEFT JOIN users creator ON t.created_by = creator.id
-      WHERE t.id = ?
-    `);
-    stmt.bind([id]);
+      WHERE t.id = $1
+    `, [id]);
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return TaskMapper.toDTO(row);
+    if (result.rows.length === 0) {
+      return undefined;
     }
-    stmt.free();
-    return undefined;
+
+    return TaskMapper.toDTO(result.rows[0]);
   }
 
-  findByAssignedTo(userId: number): TaskDTO[] {
-    const db = getDatabase();
-    const results = db.exec(`
+  async findByAssignedTo(userId: number): Promise<TaskDTO[]> {
+    const result = await query(`
       SELECT 
         t.id,
         t.title,
         t.description,
         t.status,
-        t.assigned_to as assignedTo,
-        t.created_by as createdBy,
-        t.created_at as createdAt,
-        t.updated_at as updatedAt,
-        assigned.name as assignedToName,
-        creator.name as createdByName
+        t.assigned_to as "assignedTo",
+        t.created_by as "createdBy",
+        t.created_at as "createdAt",
+        t.updated_at as "updatedAt",
+        assigned.name as "assignedToName",
+        creator.name as "createdByName"
       FROM tasks t
       LEFT JOIN users assigned ON t.assigned_to = assigned.id
       LEFT JOIN users creator ON t.created_by = creator.id
-      WHERE t.assigned_to = ${userId}
+      WHERE t.assigned_to = $1
       ORDER BY t.created_at DESC
-    `);
+    `, [userId]);
 
-    if (!results.length) return [];
-
-    const columns = results[0].columns;
-    return results[0].values.map(row => {
-      const obj: any = {};
-      columns.forEach((col, i) => obj[col] = row[i]);
-      return TaskMapper.toDTO(obj);
-    });
+    return result.rows.map((row: any) => TaskMapper.toDTO(row));
   }
 
-  create(title: string, description: string | null, createdBy: number, assignedTo: number | null): Task {
-    const db = getDatabase();
-    db.run(`
+  async create(title: string, description: string | null, createdBy: number, assignedTo: number | null): Promise<Task> {
+    const result = await query(`
       INSERT INTO tasks (title, description, created_by, assigned_to, status)
-      VALUES (?, ?, ?, ?, 'BACKLOG')
+      VALUES ($1, $2, $3, $4, 'BACKLOG')
+      RETURNING id
     `, [title, description, createdBy, assignedTo]);
 
-    saveDatabase();
-
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const lastId = result[0].values[0][0] as number;
-
-    const taskDTO = this.findById(lastId);
+    const taskId = result.rows[0].id;
+    const taskDTO = await this.findById(taskId);
+    
     if (!taskDTO) {
       throw new Error('Falha ao criar task');
     }
@@ -116,38 +93,28 @@ export class TaskRepository implements ITaskRepository {
     return TaskMapper.toEntity(taskDTO);
   }
 
-  update(id: number, title: string, description: string | null, assignedTo: number | null): void {
-    const db = getDatabase();
-    db.run(`
+  async update(id: number, title: string, description: string | null, assignedTo: number | null): Promise<void> {
+    await query(`
       UPDATE tasks
-      SET title = ?, description = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET title = $1, description = $2, assigned_to = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
     `, [title, description, assignedTo, id]);
-    saveDatabase();
   }
 
-  updateStatus(id: number, status: string): void {
-    const db = getDatabase();
-    db.run(`
+  async updateStatus(id: number, status: string): Promise<void> {
+    await query(`
       UPDATE tasks
-      SET status = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
     `, [status, id]);
-    saveDatabase();
   }
 
-  delete(id: number): void {
-    const db = getDatabase();
-    db.run(`DELETE FROM tasks WHERE id = ?`, [id]);
-    saveDatabase();
+  async delete(id: number): Promise<void> {
+    await query(`DELETE FROM tasks WHERE id = $1`, [id]);
   }
 
-  userExists(userId: number): boolean {
-    const db = getDatabase();
-    const stmt = db.prepare(`SELECT id FROM users WHERE id = ?`);
-    stmt.bind([userId]);
-    const exists = stmt.step();
-    stmt.free();
-    return exists;
+  async userExists(userId: number): Promise<boolean> {
+    const result = await query(`SELECT id FROM users WHERE id = $1`, [userId]);
+    return result.rows.length > 0;
   }
 }

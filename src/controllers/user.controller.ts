@@ -57,7 +57,7 @@ export class UserController {
       throw new ValidationException(validation.error.errors[0].message);
     }
 
-    const user = await this.userService.updateUser(id, validation.data, req.user);
+    const user = await this.userService.updateUser(id, validation.data as any, req.user);
 
     res.status(200).json({
       status: 'success',

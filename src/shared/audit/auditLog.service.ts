@@ -1,81 +1,61 @@
-import { getDatabase } from '../database/connection';
+import { query } from '../database/postgres.connection';
 
-/**
- * Service de auditoria
- * Registra ações importantes no sistema
- * 
- * Uso: Opcional, mas recomendado para rastreabilidade
- */
 export class AuditLogService {
-  private db = getDatabase();
-
-  /**
-   * Registra uma ação no log de auditoria
-   */
-  log(
+  async log(
     action: string,
     entity: string,
     entityId: number,
     performedBy: number,
     metadata?: Record<string, any>
-  ): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO audit_logs (action, entity, entity_id, performed_by, metadata)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    const metadataJson = metadata ? JSON.stringify(metadata) : null;
-    
-    stmt.run(action, entity, entityId, performedBy, metadataJson);
+  ): Promise<void> {
+    await query(
+      `INSERT INTO audit_logs (action, entity, entity_id, performed_by, metadata)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [action, entity, entityId, performedBy, metadata ? JSON.stringify(metadata) : null]
+    );
   }
 
-  /**
-   * Busca logs por entidade
-   */
-  findByEntity(entity: string, entityId: number): any[] {
-    const stmt = this.db.prepare(`
-      SELECT 
+  async findByEntity(entity: string, entityId: number): Promise<any[]> {
+    const result = await query(
+      `SELECT 
         al.id,
         al.action,
         al.entity,
-        al.entity_id as entityId,
-        al.performed_by as performedBy,
+        al.entity_id as "entityId",
+        al.performed_by as "performedBy",
         al.metadata,
-        al.created_at as createdAt,
-        u.name as performedByName,
-        u.email as performedByEmail
+        al.created_at as "createdAt",
+        u.name as "performedByName",
+        u.email as "performedByEmail"
       FROM audit_logs al
       LEFT JOIN users u ON al.performed_by = u.id
-      WHERE al.entity = ? AND al.entity_id = ?
-      ORDER BY al.created_at DESC
-    `);
+      WHERE al.entity = $1 AND al.entity_id = $2
+      ORDER BY al.created_at DESC`,
+      [entity, entityId]
+    );
 
-    return stmt.all(entity, entityId);
+    return result.rows;
   }
 
-  /**
-   * Busca logs por usuário
-   */
-  findByUser(userId: number): any[] {
-    const stmt = this.db.prepare(`
-      SELECT 
+  async findByUser(userId: number): Promise<any[]> {
+    const result = await query(
+      `SELECT 
         al.id,
         al.action,
         al.entity,
-        al.entity_id as entityId,
-        al.performed_by as performedBy,
+        al.entity_id as "entityId",
+        al.performed_by as "performedBy",
         al.metadata,
-        al.created_at as createdAt
+        al.created_at as "createdAt"
       FROM audit_logs al
-      WHERE al.performed_by = ?
+      WHERE al.performed_by = $1
       ORDER BY al.created_at DESC
-      LIMIT 100
-    `);
+      LIMIT 100`,
+      [userId]
+    );
 
-    return stmt.all(userId);
+    return result.rows;
   }
 }
 
-// Singleton exportado para uso em qualquer lugar
 export const auditLog = new AuditLogService();
-

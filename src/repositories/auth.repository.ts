@@ -1,159 +1,139 @@
-import { getDatabase, saveDatabase } from '../shared/database/connection';
+import { query } from '../shared/database/postgres.connection';
 import { User } from '../entities/User.entity';
 import { RefreshToken } from '../entities/RefreshToken.entity';
 import { IAuthRepository } from '../interfaces/repositories/IAuthRepository';
 import { UserMapper } from '../mappers/user.mapper';
 
 export class AuthRepository implements IAuthRepository {
-  findUserByEmail(email: string): User | undefined {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT 
+  async findUserByEmail(email: string): Promise<User | undefined> {
+    const result = await query(
+      `SELECT 
         id,
         name,
         email,
-        password_hash as passwordHash,
+        password_hash as "passwordHash",
         role,
-        created_at as createdAt,
-        updated_at as updatedAt
+        created_at as "createdAt",
+        updated_at as "updatedAt"
       FROM users
-      WHERE email = ?
-    `);
-    stmt.bind([email]);
+      WHERE email = $1`,
+      [email]
+    );
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return UserMapper.toEntity(row);
+    if (result.rows.length === 0) {
+      return undefined;
     }
-    stmt.free();
-    return undefined;
+
+    return UserMapper.toEntity(result.rows[0]);
   }
 
-  findUserById(id: number): User | undefined {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT 
+  async findUserById(id: number): Promise<User | undefined> {
+    const result = await query(
+      `SELECT 
         id,
         name,
         email,
-        password_hash as passwordHash,
+        password_hash as "passwordHash",
         role,
-        created_at as createdAt,
-        updated_at as updatedAt
+        created_at as "createdAt",
+        updated_at as "updatedAt"
       FROM users
-      WHERE id = ?
-    `);
-    stmt.bind([id]);
+      WHERE id = $1`,
+      [id]
+    );
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return UserMapper.toEntity(row);
+    if (result.rows.length === 0) {
+      return undefined;
     }
-    stmt.free();
-    return undefined;
+
+    return UserMapper.toEntity(result.rows[0]);
   }
 
-  createUser(name: string, email: string, passwordHash: string, role: string): User {
-    const db = getDatabase();
-    db.run(`
-      INSERT INTO users (name, email, password_hash, role)
-      VALUES (?, ?, ?, ?)
-    `, [name, email, passwordHash, role]);
+  async createUser(name: string, email: string, passwordHash: string, role: string): Promise<User> {
+    const result = await query(
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, password_hash as "passwordHash", role, created_at as "createdAt", updated_at as "updatedAt"`,
+      [name, email, passwordHash, role]
+    );
 
-    saveDatabase();
-
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const lastId = result[0].values[0][0] as number;
-
-    const user = this.findUserById(lastId);
-    if (!user) {
+    if (result.rows.length === 0) {
       throw new Error('Falha ao criar usuário');
     }
 
-    return user;
+    return UserMapper.toEntity(result.rows[0]);
   }
 
-  saveRefreshToken(token: string, userId: number, expiresAt: Date): RefreshToken {
-    const db = getDatabase();
-    db.run(`
-      INSERT INTO refresh_tokens (token, user_id, expires_at)
-      VALUES (?, ?, ?)
-    `, [token, userId, expiresAt.toISOString()]);
+  async saveRefreshToken(token: string, userId: number, expiresAt: Date): Promise<RefreshToken> {
+    const result = await query(
+      `INSERT INTO refresh_tokens (token, user_id, expires_at)
+       VALUES ($1, $2, $3)
+       RETURNING id, token, user_id as "userId", expires_at as "expiresAt", revoked, created_at as "createdAt"`,
+      [token, userId, expiresAt]
+    );
 
-    saveDatabase();
-
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const lastId = result[0].values[0][0] as number;
-
+    const row = result.rows[0];
     return new RefreshToken(
-      lastId,
-      token,
-      userId,
-      expiresAt.toISOString(),
-      0,
-      new Date().toISOString()
+      row.id,
+      row.token,
+      row.userId,
+      row.expiresAt.toISOString(),
+      row.revoked ? 1 : 0,
+      row.createdAt.toISOString()
     );
   }
 
-  findRefreshToken(token: string): RefreshToken | undefined {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT 
+  async findRefreshToken(token: string): Promise<RefreshToken | undefined> {
+    const result = await query(
+      `SELECT 
         id,
         token,
-        user_id as userId,
-        expires_at as expiresAt,
+        user_id as "userId",
+        expires_at as "expiresAt",
         revoked,
-        created_at as createdAt
+        created_at as "createdAt"
       FROM refresh_tokens
-      WHERE token = ?
-    `);
-    stmt.bind([token]);
+      WHERE token = $1`,
+      [token]
+    );
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as any;
-      stmt.free();
-      return new RefreshToken(
-        row.id,
-        row.token,
-        row.userId,
-        row.expiresAt,
-        row.revoked,
-        row.createdAt
-      );
+    if (result.rows.length === 0) {
+      return undefined;
     }
-    stmt.free();
-    return undefined;
+
+    const row = result.rows[0];
+    return new RefreshToken(
+      row.id,
+      row.token,
+      row.userId,
+      row.expiresAt.toISOString(),
+      row.revoked ? 1 : 0,
+      row.createdAt.toISOString()
+    );
   }
 
-  revokeRefreshToken(token: string): void {
-    const db = getDatabase();
-    db.run(`
-      UPDATE refresh_tokens
-      SET revoked = 1
-      WHERE token = ?
-    `, [token]);
-    saveDatabase();
+  async revokeRefreshToken(token: string): Promise<void> {
+    await query(
+      `UPDATE refresh_tokens
+       SET revoked = TRUE
+       WHERE token = $1`,
+      [token]
+    );
   }
 
-  revokeAllUserRefreshTokens(userId: number): void {
-    const db = getDatabase();
-    db.run(`
-      UPDATE refresh_tokens
-      SET revoked = 1
-      WHERE user_id = ?
-    `, [userId]);
-    saveDatabase();
+  async revokeAllUserRefreshTokens(userId: number): Promise<void> {
+    await query(
+      `UPDATE refresh_tokens
+       SET revoked = TRUE
+       WHERE user_id = $1`,
+      [userId]
+    );
   }
 
-  deleteExpiredRefreshTokens(): void {
-    const db = getDatabase();
-    db.run(`
-      DELETE FROM refresh_tokens
-      WHERE expires_at < datetime('now')
-    `);
-    saveDatabase();
+  async deleteExpiredRefreshTokens(): Promise<void> {
+    await query(
+      `DELETE FROM refresh_tokens
+       WHERE expires_at < NOW()`
+    );
   }
 }

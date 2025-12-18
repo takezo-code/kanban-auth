@@ -15,6 +15,14 @@ export const env = {
 
   // Database
   databasePath: process.env.DATABASE_PATH || path.join(process.cwd(), 'database.sqlite'),
+  postgres: {
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+    user: process.env.POSTGRES_USER || 'kanban_user',
+    password: process.env.POSTGRES_PASSWORD || 'kanban_pass',
+    database: process.env.POSTGRES_DB || 'kanban_db',
+  },
+  databaseUrl: process.env.DATABASE_URL || '',
 
   // JWT
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || 'default_access_secret_CHANGE_IN_PRODUCTION',
@@ -31,6 +39,7 @@ export const env = {
 if (env.nodeEnv === 'production') {
   if (env.jwtAccessSecret.includes('default') || env.jwtRefreshSecret.includes('default')) {
     console.error('⚠️  ERRO: JWT secrets padrão não podem ser usados em produção!');
+    console.error('💡 Configure JWT_ACCESS_SECRET e JWT_REFRESH_SECRET no .env');
     process.exit(1);
   }
 }

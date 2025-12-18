@@ -21,7 +21,7 @@ export class UserService {
       throw new ForbiddenException('Acesso negado');
     }
 
-    return this.userRepository.findAll();
+    return await this.userRepository.findAll();
   }
 
   async getUserById(id: number, currentUser: JWTPayload): Promise<UserDTO> {
@@ -29,7 +29,7 @@ export class UserService {
       throw new ForbiddenException('Acesso negado');
     }
 
-    const user = this.userRepository.findById(id);
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
@@ -42,26 +42,26 @@ export class UserService {
       throw new ForbiddenException('Apenas administradores podem atualizar usuários');
     }
 
-    const user = this.userRepository.findById(id);
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
     if (data.email) {
-      const emailExists = this.userRepository.emailExists(data.email, id);
+      const emailExists = await this.userRepository.emailExists(data.email, id);
       if (emailExists) {
         throw new ConflictException('Email já cadastrado');
       }
     }
 
-    this.userRepository.update(
+    await this.userRepository.update(
       id,
       data.name || user.name,
       data.email || user.email,
       data.role || user.role
     );
 
-    const updatedUser = this.userRepository.findById(id);
+    const updatedUser = await this.userRepository.findById(id);
     if (!updatedUser) {
       throw new Error('Falha ao buscar usuário atualizado');
     }
@@ -74,7 +74,7 @@ export class UserService {
       throw new ForbiddenException('Apenas administradores podem deletar usuários');
     }
 
-    const user = this.userRepository.findById(id);
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
@@ -84,12 +84,12 @@ export class UserService {
     }
 
     if (user.role === USER_ROLES.ADMIN) {
-      const adminCount = this.userRepository.countAdmins();
+      const adminCount = await this.userRepository.countAdmins();
       if (adminCount <= 1) {
         throw new ValidationException('Não é possível deletar o último administrador');
       }
     }
 
-    this.userRepository.delete(id);
+    await this.userRepository.delete(id);
   }
 }

@@ -1,96 +1,81 @@
-import { getDatabase, saveDatabase } from '../shared/database/connection';
+import { query } from '../shared/database/postgres.connection';
 import { UserDTO } from '../dtos/user/UserDTO';
 import { IUserRepository } from '../interfaces/repositories/IUserRepository';
 
-/**
- * Implementação do Repository de Usuários
- * Usa sql.js
- */
 export class UserRepository implements IUserRepository {
-  findAll(): UserDTO[] {
-    const db = getDatabase();
-    const results = db.exec(`
+  async findAll(): Promise<UserDTO[]> {
+    const result = await query(`
       SELECT 
         id,
         name,
         email,
         role,
-        created_at as createdAt
+        created_at as "createdAt"
       FROM users
       ORDER BY created_at DESC
     `);
 
-    if (!results.length) return [];
-
-    const columns = results[0].columns;
-    return results[0].values.map(row => {
-      const obj: any = {};
-      columns.forEach((col, i) => obj[col] = row[i]);
-      return obj as UserDTO;
-    });
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      createdAt: row.createdAt.toISOString(),
+    } as UserDTO));
   }
 
-  findById(id: number): UserDTO | undefined {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  async findById(id: number): Promise<UserDTO | undefined> {
+    const result = await query(`
       SELECT 
         id,
         name,
         email,
         role,
-        created_at as createdAt
+        created_at as "createdAt"
       FROM users
-      WHERE id = ?
-    `);
-    stmt.bind([id]);
+      WHERE id = $1
+    `, [id]);
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return row as unknown as UserDTO;
+    if (result.rows.length === 0) {
+      return undefined;
     }
-    stmt.free();
-    return undefined;
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 
-  update(id: number, name: string, email: string, role: string): void {
-    const db = getDatabase();
-    db.run(`
+  async update(id: number, name: string, email: string, role: string): Promise<void> {
+    await query(`
       UPDATE users
-      SET name = ?, email = ?, role = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SET name = $1, email = $2, role = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
     `, [name, email, role, id]);
-    saveDatabase();
   }
 
-  delete(id: number): void {
-    const db = getDatabase();
-    db.run(`DELETE FROM users WHERE id = ?`, [id]);
-    saveDatabase();
+  async delete(id: number): Promise<void> {
+    await query(`DELETE FROM users WHERE id = $1`, [id]);
   }
 
-  emailExists(email: string, excludeId?: number): boolean {
-    const db = getDatabase();
-    let stmt;
+  async emailExists(email: string, excludeId?: number): Promise<boolean> {
+    let result;
     
     if (excludeId) {
-      stmt = db.prepare(`SELECT id FROM users WHERE email = ? AND id != ?`);
-      stmt.bind([email, excludeId]);
+      result = await query(`SELECT id FROM users WHERE email = $1 AND id != $2`, [email, excludeId]);
     } else {
-      stmt = db.prepare(`SELECT id FROM users WHERE email = ?`);
-      stmt.bind([email]);
+      result = await query(`SELECT id FROM users WHERE email = $1`, [email]);
     }
 
-    const exists = stmt.step();
-    stmt.free();
-    return exists;
+    return result.rows.length > 0;
   }
 
-  countAdmins(): number {
-    const db = getDatabase();
-    const results = db.exec(`SELECT COUNT(*) as count FROM users WHERE role = 'ADMIN'`);
-    
-    if (!results.length) return 0;
-    return results[0].values[0][0] as number;
+  async countAdmins(): Promise<number> {
+    const result = await query(`SELECT COUNT(*) as count FROM users WHERE role = 'ADMIN'`);
+    return parseInt(result.rows[0].count, 10);
   }
 }
